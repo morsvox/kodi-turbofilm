@@ -21,18 +21,18 @@
 import urllib, urllib2, cookielib, re, xbmcaddon, string, xbmc, xbmcgui, xbmcplugin, os, httplib, socket
 import base64
 import random
-import sha
+import hashlib
 
 
 __settings__ = xbmcaddon.Addon(id='plugin.video.turbik.tv')
 __language__ = __settings__.getLocalizedString
-SITE = __settings__.getSetting('site')
 USERNAME = __settings__.getSetting('username')
 USERPASS = __settings__.getSetting('password')
 handle = int(sys.argv[1])
 
 PLUGIN_NAME = 'turbik.tv'
-SITEPREF      = 'http://%s' % SITE
+SITE_HOSTNAME = 'turbik.tv'
+SITEPREF      = 'https://%s' % SITE_HOSTNAME
 SITE_URL      = SITEPREF + '/'
 
 phpsessid_file = os.path.join(xbmc.translatePath('special://temp/'), 'plugin_video_turbiktv.sess')
@@ -124,22 +124,22 @@ def get_params():
 def ShowSeries(url):
 	http = Get(url)
 	if http == None:
-		xbmc.output('[%s] ShowSeries() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log('[%s] ShowSeries() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
 		return
-	#xbmc.output(http)
+	#xbmc.log(http)
 
 	raw1 = re.compile('<div id="series">(.*?)<div id="footer">', re.DOTALL).findall(http)
 	if len(raw1) == 0:
-		xbmc.output('[%s] ShowSeries() Error 2: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
-		xbmc.output(http)
+		xbmc.log('[%s] ShowSeries() Error 2: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log(http)
 		return
 
-	#xbmc.output(raw1[0])
+	#xbmc.log(raw1[0])
 
 	raw2 = re.compile('\s<a href="(.*?)">\s(.*?)</a>', re.DOTALL).findall(raw1[0])
 	if len(raw1) == 0:
-		xbmc.output('[%s] ShowSeries() Error 3: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
-		xbmc.output(raw1[0])
+		xbmc.log('[%s] ShowSeries() Error 3: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log(raw1[0])
 		return
 
 	x = 1;
@@ -169,11 +169,11 @@ def ShowSeries(url):
 		if len(raw_des2) > 0:
 			Descr = Descr + raw_des2[0]
 		sindex = str(x)
-		#xbmc.output('*** %s Thumb   = %s' % (sindex, Thumb))
-		#xbmc.output('*** %s TitleEN = %s' % (sindex, TitleEN))
-		#xbmc.output('*** %s TitleRU = %s' % (sindex, TitleRU))
-		#xbmc.output('*** %s Descr   = %s' % (sindex, Descr))
-		#xbmc.output('*** %s wurl   = %s' %  (sindex, wurl))
+		#xbmc.log('*** %s Thumb   = %s' % (sindex, Thumb))
+		#xbmc.log('*** %s TitleEN = %s' % (sindex, TitleEN))
+		#xbmc.log('*** %s TitleRU = %s' % (sindex, TitleRU))
+		#xbmc.log('*** %s Descr   = %s' % (sindex, Descr))
+		#xbmc.log('*** %s wurl   = %s' %  (sindex, wurl))
 
 		Title = '%s. %s (%s)' % (sindex, TitleRU, TitleEN)
 
@@ -195,7 +195,7 @@ def ShowSeries(url):
 def OpenSeries(url, title):
 	http = Get(url, SITEPREF + '/Series/')
 	if http == None:
-		xbmc.output('[%s] OpenSeries() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log('[%s] OpenSeries() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
 		return
 
 	raw_topimg = re.compile('<div class="topimgseries">\s*<img src="(.*?)"').findall(http)
@@ -206,20 +206,20 @@ def OpenSeries(url, title):
 
 	raw1 = re.compile('<div class="sserieslistbox">(.*?)<div class="sseriesrightbox">', re.DOTALL).findall(http)
 	if len(raw1) == 0:
-		xbmc.output('[%s] OpenSeries() Error 2: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
-		xbmc.output(http)
+		xbmc.log('[%s] OpenSeries() Error 2: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log(http)
 		return
 
 	raw2 = re.compile('<a href="(.+?)">\s(.*?)</a>', re.DOTALL).findall(raw1[0])
 	if len(raw1) == 0:
-		xbmc.output('[%s] OpenSeries() Error 3: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
-		xbmc.output(raw1[0])
+		xbmc.log('[%s] OpenSeries() Error 3: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log(raw1[0])
 		return
 
 	x = 1
 	for wurl, http2 in raw2:
-		#xbmc.output('************** wurl = %s' % wurl)
-		#xbmc.output('http2 = %s' % http2)
+		#xbmc.log('************** wurl = %s' % wurl)
+		#xbmc.log('http2 = %s' % http2)
 
 		raw_img = re.compile('<img src="(.*?)".*/>').findall(http2)
 		if len(raw_img) == 0:
@@ -250,12 +250,12 @@ def OpenSeries(url, title):
 			EpiNUM = raw_ep[0]
 
 		sindex = str(x)
-		xbmc.output('*** %s Thumb   = %s' % (sindex, Thumb))
-		xbmc.output('*** %s TitleEN = %s' % (sindex, TitleEN))
-		xbmc.output('*** %s TitleRU = %s' % (sindex, TitleRU))
-		xbmc.output('*** %s SeaNUM  = %s' % (sindex, SeaNUM))
-		xbmc.output('*** %s EpiNUM  = %s' % (sindex, EpiNUM))
-		xbmc.output('*** %s wurl    = %s' % (sindex, wurl))
+		xbmc.log('*** %s Thumb   = %s' % (sindex, Thumb))
+		xbmc.log('*** %s TitleEN = %s' % (sindex, TitleEN))
+		xbmc.log('*** %s TitleRU = %s' % (sindex, TitleRU))
+		xbmc.log('*** %s SeaNUM  = %s' % (sindex, SeaNUM))
+		xbmc.log('*** %s EpiNUM  = %s' % (sindex, EpiNUM))
+		xbmc.log('*** %s wurl    = %s' % (sindex, wurl))
 
 		Title = 'Episode %s: %s / %s' % (EpiNUM, TitleRU, TitleEN)
 		Descr = 'Season: %s\nEpisode: %s' % (SeaNUM, EpiNUM)
@@ -280,19 +280,19 @@ def OpenSeries(url, title):
 
 	raw3 = re.compile('<div class="seasonnum">(.*?)</div>', re.DOTALL).findall(http)
 	if len(raw3) == 0:
-		xbmc.output('[%s] OpenSeries() Error 4: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
-		xbmc.output(http)
+		xbmc.log('[%s] OpenSeries() Error 4: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log(http)
 		return
 
 	raw4 = re.compile('<a href="(.*?)"><span class=".*">(.*?)</span></a>').findall(raw3[0])
 	if len(raw4) == 0:
-		xbmc.output('[%s] OpenSeries() Error 5: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
-		xbmc.output(raw3[0])
+		xbmc.log('[%s] OpenSeries() Error 5: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log(raw3[0])
 		return
 
 	for row_url, row_name in raw4:
-		xbmc.output('*** row_url  = %s' % row_url)
-		xbmc.output('*** row_name = %s' % row_name)
+		xbmc.log('*** row_url  = %s' % row_url)
+		xbmc.log('*** row_name = %s' % row_name)
 
 		listitem = xbmcgui.ListItem(row_name, iconImage = TopIMG, thumbnailImage = TopIMG)
 		listitem.setInfo(type = "Video", infoLabels = {
@@ -332,13 +332,13 @@ def Watch(url, title, img):
 
 	http = Get(url)
 	if http == None:
-		xbmc.output('[%s] Watch() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log('[%s] Watch() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
 		return
 
 	raw1 = re.compile('<input type="hidden" id="metadata" value="(.*)" />').findall(http)
 	if len(raw1) == 0:
-		xbmc.output('[%s] Watch() Error 2: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
-		xbmc.output(http)
+		xbmc.log('[%s] Watch() Error 2: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+		xbmc.log(http)
 		return
 	Metadata = raw1[0]
 
@@ -382,15 +382,15 @@ def Watch(url, title, img):
 	if len(raw9) > 0:
 		Hash = raw9[0]
 
-	xbmc.output('*** eid      = %s' % eid)
-	xbmc.output('*** pid      = %s' % pid)
-	xbmc.output('*** sid      = %s' % sid)
-	xbmc.output('*** epwatch  = %s' % epwatch)
-	xbmc.output('*** sewatch  = %s' % sewatch)
-	xbmc.output('*** h1       = %s' % h1)
-	xbmc.output('*** Hash     = %s' % Hash)
-	xbmc.output('*** Metadata = %s' % Metadata)
-	xbmc.output('*** Plot     = %s' % Plot)
+	xbmc.log('*** eid      = %s' % eid)
+	xbmc.log('*** pid      = %s' % pid)
+	xbmc.log('*** sid      = %s' % sid)
+	xbmc.log('*** epwatch  = %s' % epwatch)
+	xbmc.log('*** sewatch  = %s' % sewatch)
+	xbmc.log('*** h1       = %s' % h1)
+	xbmc.log('*** Hash     = %s' % Hash)
+	xbmc.log('*** Metadata = %s' % Metadata)
+	xbmc.log('*** Plot     = %s' % Plot)
 
 
 	Meta = meta_decoder(Metadata)
@@ -468,21 +468,21 @@ def Watch(url, title, img):
 				if len(r4) > 0:
 					subtitles_ru = r4[0]
 
-	xbmc.output('    sources2_default = %s' % sources2_default)
-	xbmc.output('         sources2_hq = %s' % sources2_hq)
-	xbmc.output('              aspect = %s' % aspect)
-	xbmc.output('            duration = %s' % duration)
-	xbmc.output('                  hq = %s' % hq)
-	xbmc.output('                 Eid = %s' % Eid)
-	xbmc.output('              screen = %s' % screen)
-	xbmc.output('       sizes_default = %s' % sizes_default)
-	xbmc.output('            sizes_hq = %s' % sizes_hq)
-	xbmc.output('            langs_en = %s' % langs_en)
-	xbmc.output('            langs_ru = %s' % langs_ru)
-	xbmc.output('        subtitles_en = %s' % subtitles_en)
-	xbmc.output('        subtitles_ru = %s' % subtitles_ru)
-	xbmc.output('subtitles_en_sources = %s' % subtitles_en_sources)
-	xbmc.output('subtitles_ru_sources = %s' % subtitles_ru_sources)
+	xbmc.log('    sources2_default = %s' % sources2_default)
+	xbmc.log('         sources2_hq = %s' % sources2_hq)
+	xbmc.log('              aspect = %s' % aspect)
+	xbmc.log('            duration = %s' % duration)
+	xbmc.log('                  hq = %s' % hq)
+	xbmc.log('                 Eid = %s' % Eid)
+	xbmc.log('              screen = %s' % screen)
+	xbmc.log('       sizes_default = %s' % sizes_default)
+	xbmc.log('            sizes_hq = %s' % sizes_hq)
+	xbmc.log('            langs_en = %s' % langs_en)
+	xbmc.log('            langs_ru = %s' % langs_ru)
+	xbmc.log('        subtitles_en = %s' % subtitles_en)
+	xbmc.log('        subtitles_ru = %s' % subtitles_ru)
+	xbmc.log('subtitles_en_sources = %s' % subtitles_en_sources)
+	xbmc.log('subtitles_ru_sources = %s' % subtitles_ru_sources)
 
 
 	Hash = Hash[::-1]
@@ -492,20 +492,20 @@ def Watch(url, title, img):
 	#p0 = 'http://cdn.turbik.tv'
 	#p0 = 'http://217.199.218.60'
 
-	p1 = sha.new(Lang).hexdigest()
+	p1 = hashlib.sha1(Lang).hexdigest()
 	p2 = str(eid)
 	p3 = str(sources2_default)
 	p4 = str(Time)
 	p5 = Hash
-	p6 = sha.new(Hash + str(random.random())).hexdigest()
-	p7 = sha.new(p6 + eid + 'A2DC51DE0F8BC1E9').hexdigest()
+	p6 = hashlib.sha1(Hash + str(random.random())).hexdigest()
+	p7 = hashlib.sha1(p6 + eid + 'A2DC51DE0F8BC1E9').hexdigest()
 	retval = '/%s/%s/%s/%s/%s/%s/%s' % (p1,p2,p3,p4,p5,p6,p7)
 
 
-	xbmc.output ('SRC file retval = %s' % retval)
+	xbmc.log ('SRC file retval = %s' % retval)
 	rurl = url.replace('/', '_')
 	#dest = os.path.join(xbmc.translatePath('special://temp/'), rurl)
-	#xbmc.output ('Dest file = %s' % dest)
+	#xbmc.log ('Dest file = %s' % dest)
 
 	phpsessid = ''
 	#req = urllib2.Request(durl)
@@ -533,9 +533,9 @@ def Watch(url, title, img):
 		response = conn.getresponse()
 		conn.close()
 		if(response.status == 302):
-			xbmc.output('OK - response.status == 302')
+			xbmc.log('OK - response.status == 302')
 			Location = response.getheader('Location') # + '@'
-			xbmc.output('Location: %s' % Location)
+			xbmc.log('Location: %s' % Location)
 
 			#item = xbmcgui.ListItem(title, iconImage = thumb, thumbnailImage = thumb)
 			#item.setInfo(type="Video", infoLabels = {
