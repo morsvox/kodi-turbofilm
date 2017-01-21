@@ -12,6 +12,8 @@ __settings__ = xbmcaddon.Addon(id='plugin.video.turbik.tv')
 __language__ = __settings__.getLocalizedString
 USERNAME = __settings__.getSetting('username')
 USERPASS = __settings__.getSetting('password')
+VIDEO_LANG = __settings__.getSetting('language')
+VIDEO_QUALITY = __settings__.getSetting('quality')
 handle = int(sys.argv[1])
 
 PLUGIN_NAME = 'turbik.tv'
@@ -21,7 +23,7 @@ SITE_URL = SITEPREF + '/'
 
 phpsessid_file = os.path.join(xbmc.translatePath('special://temp/'), 'plugin_video_turbiktv.sess')
 plotdescr_file = os.path.join(xbmc.translatePath('special://temp/'), 'plugin_video_turbiktv.plot')
-thumb = os.path.join( os.getcwd(), "icon.png" )
+thumb = os.path.join(os.getcwd(), "icon.png")
 
 
 def run_once():
@@ -135,9 +137,7 @@ def show_series(url):
         xbmc.log(raw1[0])
         return
 
-    x = 1
     for wurl, http2 in raw2:
-
         raw_img = re.compile('<img src="(.*?)".*/>').findall(http2)
         if len(raw_img) == 0:
             Thumb = thumb
@@ -161,14 +161,13 @@ def show_series(url):
         raw_des2 = re.compile('<span class="serieslistboxdesc">(.*?)</span>').findall(http2)
         if len(raw_des2) > 0:
             Descr = Descr + raw_des2[0]
-        sindex = str(x)
-        #xbmc.log('*** %s Thumb   = %s' % (sindex, Thumb))
-        #xbmc.log('*** %s TitleEN = %s' % (sindex, TitleEN))
-        #xbmc.log('*** %s TitleRU = %s' % (sindex, TitleRU))
-        #xbmc.log('*** %s Descr   = %s' % (sindex, Descr))
-        #xbmc.log('*** %s wurl   = %s' %  (sindex, wurl))
 
-        Title = '%s. %s (%s)' % (sindex, TitleRU, TitleEN)
+        xbmc.log('*** Series info: Thumb=%s; TitleEN=%s; TitleRU=%s; wurl=%s' % (Thumb, TitleEN, TitleRU, wurl))
+
+        if VIDEO_LANG == 'ru':
+            Title = '%s (%s)' % (TitleRU, TitleEN)
+        elif VIDEO_LANG == 'en':
+            Title = '%s' % TitleEN
 
         thumb = make_small_thumb(Thumb)
         fanart = make_poster(Thumb)
@@ -183,8 +182,6 @@ def show_series(url):
         url = sys.argv[0] + '?mode=OpenSeries&url=' + urllib.quote_plus(wurl) \
             + '&title=' + urllib.quote_plus(Title)
         xbmcplugin.addDirectoryItem(handle, url, listitem, True)
-
-        x += 1
 
 
 def open_series(url, title):
@@ -392,7 +389,7 @@ def watch_episode(url, title, img):
     sources2_hq = ''
     aspect = '0'
     duration = '0'
-    hq = '1'
+    hq = None
     Eid = '0'
     screen = ''
     sizes_default = '0'
@@ -481,14 +478,14 @@ def watch_episode(url, title, img):
 
     Hash = Hash[::-1]
 
-    Lang = 'ru'
+    Lang = VIDEO_LANG
     Time = '0'
     #p0 = 'http://cdn.turbik.tv'
     #p0 = 'http://217.199.218.60'
 
     p1 = hashlib.sha1(Lang).hexdigest()
     p2 = str(eid)
-    p3 = str(sources2_default)
+    p3 = str(sources2_hq) if VIDEO_QUALITY == 'hq' and hq else str(sources2_default)
     p4 = str(Time)
     p5 = Hash
     p6 = hashlib.sha1(Hash + str(random.random())).hexdigest()

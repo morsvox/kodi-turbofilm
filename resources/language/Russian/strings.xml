@@ -9,4 +9,8 @@
 	<string id="30006">* Ваш баланс *</string>
 	<string id="30007">Описание не доступно</string>
 	<string id="30008">/ShowSeries/all/RU/</string>
+	<string id="30009">Preferred language</string>
+	<string id="30010">Main settings</string>
+	<string id="30011">Authentication</string>
+	<string id="30012">Stream quality</string>
 </strings>
