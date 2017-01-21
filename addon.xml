@@ -10,5 +10,8 @@
 		<summary>Смотрите сериалы с сайта https://turbik.tv</summary>
 		<description>Смотрите сериалы с сайта https://turbik.tv</description>
 		<platform>all</platform>
+		<assets>
+			<icon>resources/icon.png</icon>
+		</assets>
 	</extension>
 </addon>
