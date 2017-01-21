@@ -1,10 +1,11 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-import urllib, urllib2, cookielib, re, xbmcaddon, string, xbmc, xbmcgui, xbmcplugin, os, httplib, socket
+import urllib, urllib2, cookielib, re, string, os, httplib, socket, urlparse
 import base64
 import random
 import hashlib
+import xbmcaddon, xbmc, xbmcgui, xbmcplugin
 
 
 __settings__ = xbmcaddon.Addon(id='plugin.video.turbik.tv')
@@ -50,7 +51,7 @@ def read_url(url, ref=None):
     use_auth = False
     inter = 2
     while inter:
-        wurl = SITEPREF + url
+        wurl = urlparse.urljoin(SITEPREF, url)
         cj = cookielib.CookieJar()
         h  = urllib2.HTTPCookieProcessor(cj)
         opener = urllib2.build_opener(h)
@@ -108,6 +109,12 @@ def get_params():
 
 
 def show_series(url):
+    def make_small_thumb(url):
+        return url.replace('s.jpg', '.png')
+
+    def make_poster(url):
+        return url.replace('s.jpg', 'ts.jpg')
+
     http = read_url(url)
     if http == None:
         xbmc.log('[%s] ShowSeries() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
@@ -135,7 +142,7 @@ def show_series(url):
         if len(raw_img) == 0:
             Thumb = thumb
         else:
-            Thumb = SITEPREF + raw_img[0]
+            Thumb = urlparse.urljoin(SITEPREF, raw_img[0])
         raw_en = re.compile('<span class="serieslistboxen">(.*?)</span>').findall(http2)
         if len(raw_en) == 0:
             TitleEN = 'No title'
@@ -163,15 +170,16 @@ def show_series(url):
 
         Title = '%s. %s (%s)' % (sindex, TitleRU, TitleEN)
 
-        listitem = xbmcgui.ListItem(Title, iconImage=Thumb, thumbnailImage=Thumb)
-        listitem.setInfo(type="Video",
-                         infoLabels={
-                "Title": Title,
-                "Plot": Descr,
-                "FolderName": TitleRU
+        thumb = make_small_thumb(Thumb)
+        fanart = make_poster(Thumb)
+        listitem = xbmcgui.ListItem(Title, iconImage=Thumb, thumbnailImage=thumb)
+        listitem.setInfo(type="video", infoLabels={
+                "title": Title,
+                "plot": Descr,
+                "foldername": TitleRU
             }
         )
-        listitem.setProperty("Fanart_Image", Thumb)
+        listitem.setArt({'thumb': thumb, 'poster': fanart, 'fanart': fanart})
         url = sys.argv[0] + '?mode=OpenSeries&url=' + urllib.quote_plus(wurl) \
             + '&title=' + urllib.quote_plus(Title)
         xbmcplugin.addDirectoryItem(handle, url, listitem, True)
@@ -501,7 +509,7 @@ def watch_episode(url, title, img):
         fh.close()
 
     def play_url(path):
-        conn =   httplib.HTTPConnection('cdn.turbik.tv', 80, 10)
+        conn = httplib.HTTPConnection('cdn.turbik.tv', 80, 10)
 
         headers = {
             'User-Agent':      'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.54 Safari/535.2',
