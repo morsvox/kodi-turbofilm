@@ -5,6 +5,8 @@ import urllib, urllib2, cookielib, re, string, os, httplib, socket, urlparse
 import base64
 import random
 import hashlib
+import xml.etree.ElementTree as ET
+from string import maketrans
 import xbmcaddon, xbmc, xbmcgui, xbmcplugin
 
 
@@ -298,28 +300,14 @@ def open_series(url, title):
 def watch_episode(url, title, img):
 
     def meta_decoder(param1):
-        def enc_replace(param1, param2):
-            loc_4 = []
-            loc_5 = []
-            loc_6 = ['2','I','0','=','3','Q','8','V','7','X','G','M','R','U','H','4','1','Z','5','D','N','6','L','9','B','W']
-            loc_7 = ['x','u','Y','o','k','n','g','r','m','T','w','f','d','c','e','s','i','l','y','t','p','b','z','a','J','v']
-            if (param2 == 'e'):
-                loc_4 = loc_6
-                loc_5 = loc_7
-            if (param2 == 'd'):
-                loc_4 = loc_7
-                loc_5 = loc_6
-            loc_8 = 0
-            while (loc_8 < len(loc_4)):
-                param1 = param1.replace(loc_4[loc_8], '___')
-                param1 = param1.replace(loc_5[loc_8], loc_4[loc_8])
-                param1 = param1.replace('___', loc_5[loc_8])
-                loc_8 += 1
-            return param1
+        xlat_in  = '2I0=3Q8V7XGMRUH41Z5DN6L9BW'
+        xlat_out = 'xuYokngrmTwfdcesilytpbzaJv'
+        transtab = maketrans(xlat_in + xlat_out, xlat_out + xlat_in)
+
         param1 = param1.replace('%2b', '+')
         param1 = param1.replace('%3d', '=')
         param1 = param1.replace('%2f', '/')
-        param1 = enc_replace(param1, 'd')
+        param1 = param1.translate(transtab)
         return base64.b64decode(param1)
 
     http = read_url(url)
@@ -384,80 +372,29 @@ def watch_episode(url, title, img):
     xbmc.log('*** Metadata = %s' % Metadata)
     xbmc.log('*** Plot     = %s' % Plot)
 
-    Meta = meta_decoder(Metadata)
-    sources2_default = ''
-    sources2_hq = ''
-    aspect = '0'
-    duration = '0'
-    hq = None
-    Eid = '0'
-    screen = ''
-    sizes_default = '0'
-    sizes_hq = '0'
-    langs_en = '0'
-    langs_ru = '0'
-    subtitles_en = '0'
-    subtitles_ru = '0'
-    subtitles_en_sources = ''
-    subtitles_ru_sources = ''
+    meta_xml_bytes = meta_decoder(Metadata)
+    xbmc.log('*** Metadata     = %s' % meta_xml_bytes)
+    meta_root = ET.fromstring(meta_xml_bytes.encode('utf16'))   # See http://stackoverflow.com/questions/24045892
 
-    r1 = re.compile('<movie>(.*?)</movie>', re.DOTALL).findall(Meta)
-    if len(r1) > 0:
-        r2 = re.compile('<sources2>(.*?)</sources2>', re.DOTALL).findall(r1[0])
-        if len(r2) > 0:
-            r3 = re.compile('<default>(.*?)</default>').findall(r2[0])
-            if len(r3) > 0:
-                sources2_default = r3[0]
-            r3 = re.compile('<hq>(.*?)</hq>').findall(r2[0])
-            if len(r3) > 0:
-                sources2_hq = r3[0]
-        r2 = re.compile('<aspect>(.*?)</aspect>').findall(r1[0])
-        if len(r2) > 0:
-            aspect = r2[0]
-        r2 = re.compile('<duration>(.*?)</duration>').findall(r1[0])
-        if len(r2) > 0:
-            duration = r2[0]
-        r2 = re.compile('<hq>(.*?)</hq>').findall(r1[0])
-        if len(r2) > 0:
-            hq = r2[0]
-        r2 = re.compile('<eid>(.*?)</eid>').findall(r1[0])
-        if len(r2) > 0:
-            Eid = r2[0]
-        r2 = re.compile('<screen>(.*?)</screen>').findall(r1[0])
-        if len(r2) > 0:
-            screen = r2[0]
-        r2 = re.compile('<sizes>(.*?)</sizes>', re.DOTALL).findall(r1[0])
-        if len(r2) > 0:
-            r3 = re.compile('<default>(.*?)</default>').findall(r2[0])
-            if len(r3) > 0:
-                sizes_default = r3[0]
-            r3 = re.compile('<hq>(.*?)</hq>').findall(r2[0])
-            if len(r3) > 0:
-                sizes_hq = r3[0]
-        r2 = re.compile('<langs>(.*?)</langs>', re.DOTALL).findall(r1[0])
-        if len(r2) > 0:
-            r3 = re.compile('<en>(.*?)</en>').findall(r2[0])
-            if len(r3) > 0:
-                langs_en = r3[0]
-            r3 = re.compile('<ru>(.*?)</ru>').findall(r2[0])
-            if len(r3) > 0:
-                langs_ru = r3[0]
-        r2 = re.compile('<subtitles>(.*?)</subtitles>', re.DOTALL).findall(r1[0])
-        if len(r2) > 0:
-            r3 = re.compile('<en>(.*?)</en>').findall(r2[0])
-            if len(r3) > 0:
-                subtitles_en = r3[0]
-            r3 = re.compile('<ru>(.*?)</ru>').findall(r2[0])
-            if len(r3) > 0:
-                subtitles_ru = r3[0]
-            r3 = re.compile('<sources>(.*?)</sources>', re.DOTALL).findall(r2[0])
-            if len(r3) > 0:
-                r4 = re.compile('<en>(.*?)</en>').findall(r3[0])
-                if len(r4) > 0:
-                    subtitles_en_sources = r4[0]
-                r4 = re.compile('<ru>(.*?)</ru>').findall(r3[0])
-                if len(r4) > 0:
-                    subtitles_ru = r4[0]
+    def xpath_text_or_default(root, xpath, default):
+        elements = root.findall(xpath)
+        return elements[0].text if elements else default
+
+    sources2_default = xpath_text_or_default(meta_root, './sources2/default', '')
+    sources2_hq = xpath_text_or_default(meta_root, './sources2/hq', '')
+    aspect = xpath_text_or_default(meta_root, './aspect', '0')
+    duration = xpath_text_or_default(meta_root, './duration', '0')
+    hq = xpath_text_or_default(meta_root, './hq', None)
+    Eid = xpath_text_or_default(meta_root, './eid', '0')
+    screen = xpath_text_or_default(meta_root, './screen', '')
+    sizes_default = xpath_text_or_default(meta_root, './sizes/default', '0')
+    sizes_hq = xpath_text_or_default(meta_root, './sizes/hq', '0')
+    langs_en = xpath_text_or_default(meta_root, './langs/en', '0')
+    langs_ru = xpath_text_or_default(meta_root, './langs/ru', '0')
+    subtitles_en = xpath_text_or_default(meta_root, './subtitles/en', '0')
+    subtitles_ru = xpath_text_or_default(meta_root, './subtitles/ru', '0')
+    subtitles_en_sources = xpath_text_or_default(meta_root, './subtitles/sources/en', '')
+    subtitles_ru_sources = xpath_text_or_default(meta_root, './subtitles/sources/ru', '')
 
     xbmc.log('    sources2_default = %s' % sources2_default)
     xbmc.log('         sources2_hq = %s' % sources2_hq)
