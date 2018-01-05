@@ -14,8 +14,8 @@ __settings__ = xbmcaddon.Addon(id='plugin.video.turbik.tv')
 __language__ = __settings__.getLocalizedString
 USERNAME = __settings__.getSetting('username')
 USERPASS = __settings__.getSetting('password')
-VIDEO_LANG = __settings__.getSetting('language')
-VIDEO_QUALITY = __settings__.getSetting('quality')
+VIDEO_LANG = __settings__.getSetting('language') or 'en'
+VIDEO_QUALITY = __settings__.getSetting('quality') or 'lq'
 handle = int(sys.argv[1])
 
 PLUGIN_NAME = 'turbik.tv'
@@ -49,6 +49,12 @@ def run_once():
         else:
             return False
     return True
+
+
+def regex_or_default(text, pattern, default, flags=0):
+    match = re.search(pattern, text, flags)
+    xbmc.log('***** Matcher = %s' % match)
+    return match.group(1) if match else default
 
 
 def read_url(url, ref=None):
@@ -177,7 +183,7 @@ def show_series(url):
         listitem.setInfo(type="video", infoLabels={
                 "title": Title,
                 "plot": Descr,
-                "foldername": TitleRU
+                #"foldername": TitleRU
             }
         )
         listitem.setArt({'thumb': thumb, 'poster': fanart, 'fanart': fanart})
@@ -189,69 +195,41 @@ def show_series(url):
 def open_series(url, title):
     http = read_url(url, SITEPREF + '/Series/')
     if http == None:
-        xbmc.log('[%s] OpenSeries() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
+        xbmc.log('[%s] open_series() Error 1: No data when opening URL=%s' % (PLUGIN_NAME, url), xbmc.LOGERROR)
         return
 
     raw_topimg = re.compile('<div class="topimgseries">\s*<img src="(.*?)"').findall(http)
     if len(raw_topimg) == 0:
         TopIMG = thumb
     else:
-        TopIMG = SITEPREF + raw_topimg[0]
+        TopIMG = urlparse.urljoin(SITEPREF, raw_topimg[0])
 
     raw1 = re.compile('<div class="sserieslistbox">(.*?)<div class="sseriesrightbox">', re.DOTALL).findall(http)
     if len(raw1) == 0:
-        xbmc.log('[%s] OpenSeries() Error 2: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+        xbmc.log('[%s] open_series() Error 2: `sserieslistbox` element not found. URL=%s' % (PLUGIN_NAME, url), xbmc.LOGERROR)
         xbmc.log(http)
         return
 
     raw2 = re.compile('<a href="(.+?)">\s(.*?)</a>', re.DOTALL).findall(raw1[0])
     if len(raw1) == 0:
-        xbmc.log('[%s] OpenSeries() Error 3: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+        xbmc.log('[%s] open_series() Error 3: <a> element not found. URL=%s' % (PLUGIN_NAME, url), xbmc.LOGERROR)
         xbmc.log(raw1[0])
         return
 
-    x = 1
     for wurl, http2 in raw2:
-        #xbmc.log('************** wurl = %s' % wurl)
-        #xbmc.log('http2 = %s' % http2)
+        Thumb = regex_or_default(http2, u'<img src="(.*?)".*/>', TopIMG)
+        TitleEN = regex_or_default(http2, u'<span class="sserieslistonetxten">(.*?)</span>', 'No title')
+        TitleRU = regex_or_default(http2, u'<span class="sserieslistonetxtru">(.*?)</span>', 'No title')
+        SeaNUM = regex_or_default(http2, u'<span class="sserieslistonetxtse">Сезон: (.*?)</span>', 'Season not specified')
+        EpiNUM = regex_or_default(http2, '<span class="sserieslistonetxtep">Эпизод: (.*?)</span>', 'The episode is not specified')
 
-        raw_img = re.compile('<img src="(.*?)".*/>').findall(http2)
-        if len(raw_img) == 0:
-            Thumb = TopIMG
-        else:
-            Thumb = raw_img[0]
-        raw_en = re.compile('<span class="sserieslistonetxten">(.*?)</span>').findall(http2)
-        if len(raw_en) == 0:
-            TitleEN = 'No title'
-        else:
-            TitleEN = raw_en[0]
-        raw_ru = re.compile('<span class="sserieslistonetxtru">(.*?)</span>').findall(http2)
-        if len(raw_ru) == 0:
-            TitleRU = 'No title'
-        else:
-            TitleRU = raw_ru[0]
+        xbmc.log('*** Series info: Thumb=%s; TitleEN=%s; TitleRU=%s; SeaNUM=%s; EpiNUM=%s; wurl=%s' % (Thumb, TitleEN, TitleRU, SeaNUM, EpiNUM, wurl))
 
-        raw_se = re.compile(u'<span class="sserieslistonetxtse">Сезон: (.*?)</span>').findall(http2)
-        if len(raw_se) == 0:
-            SeaNUM = 'Season not specified'
-        else:
-            SeaNUM = raw_se[0]
+        if VIDEO_LANG == 'ru':
+            Title = 'Episode %s: %s / %s' % (EpiNUM, TitleRU, TitleEN)
+        elif VIDEO_LANG == 'en':
+            Title = 'Episode %s: %s' % (EpiNUM, TitleEN)
 
-        raw_ep = re.compile('<span class="sserieslistonetxtep">Эпизод: (.*?)</span>').findall(http2)
-        if len(raw_ep) == 0:
-            EpiNUM = 'The episode is not specified'
-        else:
-            EpiNUM = raw_ep[0]
-
-        sindex = str(x)
-        xbmc.log('*** %s Thumb   = %s' % (sindex, Thumb))
-        xbmc.log('*** %s TitleEN = %s' % (sindex, TitleEN))
-        xbmc.log('*** %s TitleRU = %s' % (sindex, TitleRU))
-        xbmc.log('*** %s SeaNUM  = %s' % (sindex, SeaNUM))
-        xbmc.log('*** %s EpiNUM  = %s' % (sindex, EpiNUM))
-        xbmc.log('*** %s wurl    = %s' % (sindex, wurl))
-
-        Title = 'Episode %s: %s / %s' % (EpiNUM, TitleRU, TitleEN)
         Descr = 'Season: %s\nEpisode: %s' % (SeaNUM, EpiNUM)
 
         listitem = xbmcgui.ListItem(Title, iconImage=Thumb, thumbnailImage=Thumb)
@@ -270,17 +248,15 @@ def open_series(url, title):
             + '&title=' + urllib.quote_plus(Title)
         xbmcplugin.addDirectoryItem(handle, url, listitem, False)
 
-        x += 1
-
     raw3 = re.compile('<div class="seasonnum">(.*?)</div>', re.DOTALL).findall(http)
     if len(raw3) == 0:
-        xbmc.log('[%s] OpenSeries() Error 4: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+        xbmc.log('[%s] open_series() Error 4: `seasonnum` not found. URL=%s' % (PLUGIN_NAME, url))
         xbmc.log(http)
         return
 
     raw4 = re.compile('<a href="(.*?)"><span class=".*">(.*?)</span></a>').findall(raw3[0])
     if len(raw4) == 0:
-        xbmc.log('[%s] OpenSeries() Error 5: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+        xbmc.log('[%s] open_series() Error 5: Inner <a> element not found. URL=%s' % (PLUGIN_NAME, url))
         xbmc.log(raw3[0])
         return
 
@@ -312,12 +288,12 @@ def watch_episode(url, title, img):
 
     http = read_url(url)
     if http == None:
-        xbmc.log('[%s] Watch() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
+        xbmc.log('[%s] watch_episode() Error 1: Not received data when opening URL=%s' % (PLUGIN_NAME, url))
         return
 
     raw1 = re.compile('<input type="hidden" id="metadata" value="(.*)" />').findall(http)
     if len(raw1) == 0:
-        xbmc.log('[%s] Watch() Error 2: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
+        xbmc.log('[%s] watch_episode() Error 2: r.e. not found it necessary elements. URL=%s' % (PLUGIN_NAME, url))
         xbmc.log(http)
         return
     Metadata = raw1[0]
@@ -384,7 +360,7 @@ def watch_episode(url, title, img):
     sources2_hq = xpath_text_or_default(meta_root, './sources2/hq', '')
     aspect = xpath_text_or_default(meta_root, './aspect', '0')
     duration = xpath_text_or_default(meta_root, './duration', '0')
-    hq = xpath_text_or_default(meta_root, './hq', None)
+    hq = int(xpath_text_or_default(meta_root, './hq', '0'))
     Eid = xpath_text_or_default(meta_root, './eid', '0')
     screen = xpath_text_or_default(meta_root, './screen', '')
     sizes_default = xpath_text_or_default(meta_root, './sizes/default', '0')
@@ -443,7 +419,7 @@ def watch_episode(url, title, img):
         fh.close()
 
     def play_url(path):
-        conn = httplib.HTTPConnection('cdn.turbik.tv', 80, 10)
+        conn = httplib.HTTPSConnection('cdn.turbik.tv', 443, timeout=10)
 
         headers = {
             'User-Agent':      'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/535.2 (KHTML, like Gecko) Chrome/15.0.874.54 Safari/535.2',
@@ -460,6 +436,10 @@ def watch_episode(url, title, img):
         conn.request("GET", path, '', headers)
         response = conn.getresponse()
         conn.close()
+        xbmc.log ('Url: ' + str(path))
+        xbmc.log ('Headers: ' + str(headers))
+        xbmc.log ('Ret Status: ' + str(response.status))
+        xbmc.log ('Ret Response: ' + str(response))
         if response.status == 302:
             xbmc.log('OK - response.status == 302')
             Location = response.getheader('Location')  # + '@'
@@ -495,7 +475,6 @@ def watch_episode(url, title, img):
 
             return
         return
-
 
     play_url(retval)
 
