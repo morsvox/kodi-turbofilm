@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
-	<setting id="site" type="text" label="30000" default="turbik.tv" />
-	<setting id="username" type="text" label="30001" default="" />
-	<setting id="password" type="text" label="30002" option="hidden" default="" />
+	<category label="30010">
+		<setting id="language" type="labelenum" label="30009" lvalues="ru|en"/>
+		<setting id="quality" type="labelenum" label="30012" lvalues="lq|hq"/>
+	</category>
+	<category label="30011">
+		<setting id="username" type="text" label="30001" default="" />
+		<setting id="password" type="text" label="30002" option="hidden" default="" />
+	</category>
 </settings>
